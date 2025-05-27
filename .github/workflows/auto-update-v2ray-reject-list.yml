@@ -1,4 +1,4 @@
-name: Auto Update File
+name: Auto Update V2ray Reject List
 
 on:
   schedule:
