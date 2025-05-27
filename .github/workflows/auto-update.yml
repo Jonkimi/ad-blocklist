@@ -1,0 +1,48 @@
+name: Auto Update File
+
+on:
+  schedule:
+    # 每天 UTC 时间凌晨 00:00 运行
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update_and_commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # 指定要操作的分支
+          ref: main # 将 'main' 替换为你的目标分支名称
+
+      - name: Download file
+        run: |
+          FILE_URL="https://raw.githubusercontent.com/Loyalsoldier/v2ray-rules-dat/refs/heads/release/reject-list.txt"
+          LOCAL_FILE_NAME="v2ray-reject-list.txt"
+          curl -o "$LOCAL_FILE_NAME" "$FILE_URL"
+
+      - name: Modify file with sed
+        run: |
+          LOCAL_FILE_NAME="v2ray-reject-list.txt"
+          sed -i 's/^/127.0.0.1 /' "$LOCAL_FILE_NAME"
+
+      - name: Check for changes
+        id: git_status
+        run: |
+          if git diff --exit-code; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push if changes exist
+        if: steps.git_status.outputs.no_changes == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Auto update and modify file"
+          # 当指定了 ref 时，git push 会自动推送到该分支
+          git push
